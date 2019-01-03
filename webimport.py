@@ -16,11 +16,10 @@ logging.basicConfig(level=_LOG_LEVEL_, format='%(levelname)-7s:%(message)s')
 
 logging.getLogger("WIMP")
 
-def register(port, location='localhost', override=False, caching=False):
+def register(port, location='localhost', override=False):
     WebImporter.port     = port
     WebImporter.location = location
     WebImporter.override = override
-    WebImporter.caching  = caching
     logging.info("Registered to %s:%s, override: %s"%(location, port, override))
     if override:
         flush_modules()
@@ -62,12 +61,6 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
     def _is_present_remote(self, fullname):
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
-        if self.caching and (status[1] != _MOD_UNKNOWN_):
-            if bool(status[1]):
-                logging.debug("[%s] Cache | available remote"%fullname)
-            else:
-                logging.debug("[%s] Cache | Not available remote"%fullname)
-            return bool(status[1])
         try:
             logging.info("[%s]  |- Checking remote availability"%fullname)
             r = self._do_search(fullname)
