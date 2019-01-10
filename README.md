@@ -34,5 +34,5 @@ First Terminal
 
 Second Terminal
 
-    cat webimport.py script.py | ssh -R 8000:localhost:8000 user@some.server 'cat -|python3'
+    cat webimport/webimport.py script.py | ssh -R 8000:localhost:8000 user@some.server 'cat -|python3'
 
