@@ -7,6 +7,7 @@ import encodings.idna
 import http.client
 import importlib
 import importlib.abc
+import importlib.util
 import logging
 import sys
 
@@ -49,7 +50,7 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
             logging.debug("[%s]  |- Not chached. Searching..."%fullname)
             status[0] = _MOD_SEARCHING_
             self.modules[fullname] = status
-            loader = importlib.find_loader(fullname)
+            loader = importlib.util.find_spec(fullname)
             status[0] = _MOD_IS_PRESENT_ if loader else _MOD_NOT_PRESENT_
             self.modules[fullname] = status
         if bool(status[0]):
@@ -104,13 +105,14 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         return None
 
 
-    def find_spec(self, fullname, *args, **kwargs):
-        if not self.find_module(fullname):
+    def find_spec(self, fullname, path, target=None):
+        if not self.find_module(fullname,path):
             return None
         logging.info("[%s]  |- Loading spec"%fullname)
         if self.is_package(fullname):
             logging.debug("[%s]  |   |- Spec is a package"%fullname)
-        spec = importlib.machinery.ModuleSpec(fullname, self, is_package=self.is_package(fullname))
+        #spec = importlib.machinery.ModuleSpec(fullname, self, origin=self.modules.get(fullname)[1], is_package=self.is_package(fullname))
+        spec = importlib.util.spec_from_loader(fullname,self,origin=self.modules.get(fullname)[1], is_package=self.is_package(fullname))
         return spec
 
 
