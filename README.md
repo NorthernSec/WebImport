@@ -14,11 +14,11 @@ This package is written for Python3.4 or newer.
 If WebImporter is available on a given system, you can import it as shown below:
 ```python
     import webimport
-    webimport.register(8000, location='some.http.server', override=False)
+    webimport.register(location='some.http.server', port=8080, override=False)
 ```
 The register command takes 3 arguments.
- * port (Required): The port to connect to
  * location (optional): The host to connect to. Default: localhost
+ * port (optional): The port to connect to. Default: 8080
  * override: (optional): Try to import from remote first. Default: False
 
 ### Preparing the server
