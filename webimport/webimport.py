@@ -28,7 +28,7 @@ import sys
 # Logger
 _LOG_LEVEL_ = logging.WARNING
 logging.basicConfig(level=_LOG_LEVEL_, format='%(levelname)-7s:%(message)s')
-logging.getLogger("WIMP")
+logger = logging.getLogger("WIMP")
 
 
 def register(location=None, port=None, override=False):
@@ -44,14 +44,14 @@ def register(location=None, port=None, override=False):
           mind in case you run into bugs. You can check your `sys.meta_path` for
           the available import handlers, and remove them from there if necessary.
     """
-    if not isinstance(location, str):
-        raise ValueError("location' should be a string")
-    if not isinstance(port, int):
-        raise ValueError("'port' should be an integer")
     WebImporter.location = location or 'localhost'
     WebImporter.port     = port     or 8080
     WebImporter.override = override
-    logging.info("Registered to %s:%s, override: %s"%(location, port, override))
+    if not isinstance(WebImporter.location, str):
+        raise ValueError("location' should be a string")
+    if not isinstance(WebImporter.port, int):
+        raise ValueError("'port' should be an integer")
+    logger.info("Registered to %s:%s, override: %s"%(location, port, override))
     if override:
         flush_modules()
     sys.meta_path.insert(0,WebImporter())
@@ -65,8 +65,8 @@ def flush_modules():
             key not in ['sys', 'builtins', 'encodings.idna',
                         'http.client', 'logging']):
             del sys.modules[key]
-            logging.debug("[%s] Flushed"%key)
-    logging.info("Flushed all non-system modules")
+            logger.debug("[%s] Flushed"%key)
+    logger.info("Flushed all non-system modules")
 
 
 class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
@@ -79,23 +79,23 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
     location = 'localhost'
     override = False
     modules  = {}  # structure: [present local, present remote]
-    logging.info("Initialized")
+    logger.info("Initialized")
 
 
     def _is_present_locally(self, fullname):
         """Checks if a library is present locally."""
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         if status[0] == _MOD_UNKNOWN_:
-            logging.debug("[%s]  |- Not chached. Searching..."%fullname)
+            logger.debug("[%s]  |- Not chached. Searching..."%fullname)
             status[0] = _MOD_SEARCHING_
             self.modules[fullname] = status
             loader = importlib.util.find_spec(fullname)
             status[0] = _MOD_IS_PRESENT_ if loader else _MOD_NOT_PRESENT_
             self.modules[fullname] = status
         if bool(status[0]):
-            logging.info("[%s]  |    |- Found locally"%fullname)
+            logger.info("[%s]  |    |- Found locally"%fullname)
         else:
-            logging.info("[%s]  |    |- Not found locally"%fullname)
+            logger.info("[%s]  |    |- Not found locally"%fullname)
         return bool(status[0])
 
 
@@ -103,17 +103,17 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         """Checks if a library is present remotely."""
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         try:
-            logging.info("[%s]  |- Checking remote availability"%fullname)
+            logger.info("[%s]  |- Checking remote availability"%fullname)
             r = self._do_search(fullname)
         except ValueError as e:
             print(e)
             status[1] = _MOD_NOT_PRESENT_
         else:
             if r != None:
-                 logging.debug("[%s]  |   |- Available at %s"%(fullname, r))
+                 logger.debug("[%s]  |   |- Available at %s"%(fullname, r))
                  status[1] = r
             else:
-                logging.debug("[%s]  |   |- Not available remote"%fullname)
+                logger.debug("[%s]  |   |- Not available remote"%fullname)
                 status[1] = _MOD_NOT_PRESENT_
             self.modules[fullname] = status
         return bool(status[1])
@@ -147,18 +147,18 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
             None | WebImporter: Returns itself if WebImport should load the module,
                                   otherwise returns None
         """
-        logging.info("[%s] Finding module"%fullname)
+        logger.info("[%s] Finding module"%fullname)
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         # If find_module is triggered while searching locally, ignore
         if status[0] == _MOD_SEARCHING_:
             return None
         # Unless overridden: First try to import locally
         if not self.override and self._is_present_locally(fullname):
-            logging.debug("[%s]  |- Loading locally instead"%fullname)
+            logger.debug("[%s]  |- Loading locally instead"%fullname)
             return None
         # Check if package is available remotely
         if self._is_present_remote(fullname):
-            logging.debug("[%s]  |- WAMP can load this"%fullname)
+            logger.debug("[%s]  |- WAMP can load this"%fullname)
             return self
         return None
 
@@ -167,9 +167,9 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         """Gets the spec of the library"""
         if not self.find_module(fullname,path):
             return None
-        logging.info("[%s]  |- Loading spec"%fullname)
+        logger.info("[%s]  |- Loading spec"%fullname)
         if self.is_package(fullname):
-            logging.debug("[%s]  |   |- Spec is a package"%fullname)
+            logger.debug("[%s]  |   |- Spec is a package"%fullname)
         origin = self.modules.get(fullname)[1]
         spec = importlib.util.spec_from_loader(fullname, self, origin=origin,
                                                is_package=self.is_package(fullname))
@@ -185,7 +185,7 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         Returns:
             str: The code of the module.
         """
-        logging.info("[%s]  |- Fetching source"%fullname)
+        logger.info("[%s]  |- Fetching source"%fullname)
         try:
             assert isinstance(self.port, int)
             # We assume that by this point, we have located the module
@@ -193,19 +193,19 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
             url = self.get_filename(fullname)
             r = self._do_request(path)
             if r.status == 200:
-                logging.debug("[%s]  |   |- Source found"%fullname)
+                logger.debug("[%s]  |   |- Source found"%fullname)
                 code = r.read()
             elif self.is_package(fullname):
                 # init missing. add empty one
-                logging.debug("[%s]  |   |- Source missing. Using empty __init__.py"%fullname)
+                logger.debug("[%s]  |   |- Source missing. Using empty __init__.py"%fullname)
                 code = ''
             else:
-                logging.error("[%s]  |   |- Not available remote!"%fullname)
+                logger.error("[%s]  |   |- Not available remote!"%fullname)
                 raise Exception("Module not available remotely")
             # Build module
             return code
         except Exception as e:
-            logging.error("[%s] Exception happened: %s"%(fullname, e))
+            logger.error("[%s] Exception happened: %s"%(fullname, e))
         return None
 
 
