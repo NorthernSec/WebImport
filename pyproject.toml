@@ -1,0 +1,53 @@
+[project]
+name            = "webimport"
+version         = "0.1.2"
+description     = "Enables python to import modules over a http connection"
+readme          = "README.md"
+license         = {file = "LICENSE.md"}
+requires-python = ">=3.4"
+#keywords        = ["automation"]
+
+authors = [
+  {name = "Pieter-Jan Moreels", email = "pieter-jan@pidgey.net" }
+]
+
+maintainers = [
+  {name = "Pieter-Jan Moreels", email = "pieter-jan@pidgey.net" }
+]
+
+# For a list of valid classifiers, see https://pypi.org/classifiers/
+classifiers = [  # Optional
+  "License :: OSI Approved :: GPL-3.0 License",
+
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.4",
+  "Programming Language :: Python :: 3.5",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+dependencies = [
+    "click"
+]
+
+[project.urls]
+"Homepage"    = "https://github.com/NorthernSec/WebImport"
+"Bug Reports" = "https://github.com/NorthernSec/WebImport/issues"
+"Source"      = "https://github.com/NorthernSec/WebImport"
+
+[project.scripts]
+webimport-server = "webimport.server:run"
+
+
+[build-system]
+requires      = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["webimport"]

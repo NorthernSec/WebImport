@@ -3,7 +3,7 @@ Import python libraries over HTTP.
 This package allows you to load python modules on a system where these packages may not be available.
 It uses a HTTP connection to fetch these packages remotely.
 
-This package is written for Python3.
+This package is written for Python3.4 or newer.
 
 ## Use cases
  * Running dynamic code from a read-only filesystem
@@ -41,4 +41,17 @@ python3 -m "http.server" 8000
 Second Terminal
 ```sh
 cat webimport/webimport.py script.py | ssh -R 8000:localhost:8000 user@some.server 'cat -|python3'
+```
+
+#### Running scripts without SSH tunnel:
+Set up the webserver with the webimport-server command (requires pip installation of webimport):
+```sh
+webimport-server my_package_dir
+```
+
+From the other device, you can run any of the following:
+
+**Open a terminal and pre-load the webimport code**
+```sh
+python3 -i -c "$(curl server-url:8080/_hook)"
 ```
