@@ -1,2 +1,2 @@
 import webimport
-from .webimport import register
+from webimport.webimport import register

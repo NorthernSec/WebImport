@@ -3,7 +3,7 @@ import os
 import click
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-import webimport
+import webimport.webimport
 
 class CustomHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
