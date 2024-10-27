@@ -24,6 +24,7 @@ def register(port, location='localhost', override=False):
     logging.info("Registered to %s:%s, override: %s"%(location, port, override))
     if override:
         flush_modules()
+    sys.meta_path.insert(0,WebImporter())
 
 
 def flush_modules():
@@ -161,8 +162,6 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         c.request("GET", fullname)
         return c.getresponse()
 
-
-sys.meta_path.insert(0,WebImporter())
 
 if __name__ == '__main__':
     register(8000)
