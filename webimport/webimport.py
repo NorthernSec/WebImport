@@ -40,6 +40,7 @@ def flush_modules():
 class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
     port     = None
     location = 'localhost'
+    override = False
     modules  = {} # structure: [present local, present remote]
     logging.info("Initialized")
 
@@ -111,7 +112,6 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         logging.info("[%s]  |- Loading spec"%fullname)
         if self.is_package(fullname):
             logging.debug("[%s]  |   |- Spec is a package"%fullname)
-        #spec = importlib.machinery.ModuleSpec(fullname, self, origin=self.modules.get(fullname)[1], is_package=self.is_package(fullname))
         spec = importlib.util.spec_from_loader(fullname,self,origin=self.modules.get(fullname)[1], is_package=self.is_package(fullname))
         return spec
 
