@@ -1,8 +1,22 @@
+#!/usr/bin/env python3
+"""WebImport.
+
+This library provides a remote import handler called "webimport".
+
+Classes:
+    WebImporter:
+
+Methods:
+    register():      Register the webimport import handler with specified settigns.
+    flush_modules(): Flush out currently loaded modules.
+"""
+# Flags
 _MOD_IS_PRESENT_  = 1
 _MOD_NOT_PRESENT_ = 0
 _MOD_SEARCHING_   = -1
 _MOD_UNKNOWN_     = -2
 
+# Imports
 import encodings.idna
 import http.client
 import importlib
@@ -11,15 +25,31 @@ import importlib.util
 import logging
 import sys
 
+# Logger
 _LOG_LEVEL_ = logging.WARNING
-
 logging.basicConfig(level=_LOG_LEVEL_, format='%(levelname)-7s:%(message)s')
-
 logging.getLogger("WIMP")
 
-def register(port, location='localhost', override=False):
-    WebImporter.port     = port
-    WebImporter.location = location
+
+def register(location=None, port=None, override=False):
+    """Register the WebImport import handler with certain settings.
+
+    Args:
+        location (str):  The url of the webserver.
+        port     (int):  The port of the webserver.
+        override (bool): Set to True if you want to prioritize external libraries
+                          over local ones.
+    Notes:
+        Please note that you can register multiple webimport loaders. Keep that in
+          mind in case you run into bugs. You can check your `sys.meta_path` for
+          the available import handlers, and remove them from there if necessary.
+    """
+    if not isinstance(location, str):
+        raise ValueError("location' should be a string")
+    if not isinstance(port, int):
+        raise ValueError("'port' should be an integer")
+    WebImporter.location = location or 'localhost'
+    WebImporter.port     = port     or 8080
     WebImporter.override = override
     logging.info("Registered to %s:%s, override: %s"%(location, port, override))
     if override:
@@ -28,7 +58,8 @@ def register(port, location='localhost', override=False):
 
 
 def flush_modules():
-    mods = list(set([x.__name__ for x in sys.modules.values()]))
+    """'un-imports' all non-system libraries that are not used by webimport."""
+    mods = list({x.__name__ for x in sys.modules.values()})
     for key in mods:
         if (not key.startswith('_') and not 'importlib' in key and
             key not in ['sys', 'builtins', 'encodings.idna',
@@ -39,14 +70,20 @@ def flush_modules():
 
 
 class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
+    """The "WebImporter" import handler class.
+
+    Methods:
+
+    """
     port     = None
     location = 'localhost'
     override = False
-    modules  = {} # structure: [present local, present remote]
+    modules  = {}  # structure: [present local, present remote]
     logging.info("Initialized")
 
 
     def _is_present_locally(self, fullname):
+        """Checks if a library is present locally."""
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         if status[0] == _MOD_UNKNOWN_:
             logging.debug("[%s]  |- Not chached. Searching..."%fullname)
@@ -63,6 +100,7 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
 
     def _is_present_remote(self, fullname):
+        """Checks if a library is present remotely."""
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         try:
             logging.info("[%s]  |- Checking remote availability"%fullname)
@@ -82,15 +120,33 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
 
     def is_package(self, fullname):
+        """Checks if the provided name is that of a package (is an __init__.py).
+
+        Args:
+            fullname (str): the full name of a package.
+
+        Returns:
+            bool: True if the module is a package.
+        """
         path = self.modules.get(fullname, ['', ''])[1]
         return path.endswith('/__init__.py')
 
 
     def get_filename(self, fullname):
+        """Gets the filename."""
         return fullname
 
 
     def find_module(self, fullname, *args, **kwargs):
+        """Checks if WebImport can and should load this module.
+
+        Args:
+            fullname (str): The full path of the module.
+
+        Returns:
+            None | WebImporter: Returns itself if WebImport should load the module,
+                                  otherwise returns None
+        """
         logging.info("[%s] Finding module"%fullname)
         status = self.modules.get(fullname, [_MOD_UNKNOWN_, _MOD_UNKNOWN_])
         # If find_module is triggered while searching locally, ignore
@@ -108,16 +164,27 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
 
     def find_spec(self, fullname, path, target=None):
+        """Gets the spec of the library"""
         if not self.find_module(fullname,path):
             return None
         logging.info("[%s]  |- Loading spec"%fullname)
         if self.is_package(fullname):
             logging.debug("[%s]  |   |- Spec is a package"%fullname)
-        spec = importlib.util.spec_from_loader(fullname,self,origin=self.modules.get(fullname)[1], is_package=self.is_package(fullname))
+        origin = self.modules.get(fullname)[1]
+        spec = importlib.util.spec_from_loader(fullname, self, origin=origin,
+                                               is_package=self.is_package(fullname))
         return spec
 
 
     def get_data(self, fullname):
+        """Gets the module code from the remote server.
+
+        Args:
+            fullname (str): The full path of the module you want to load.
+
+        Returns:
+            str: The code of the module.
+        """
         logging.info("[%s]  |- Fetching source"%fullname)
         try:
             assert isinstance(self.port, int)
@@ -143,6 +210,14 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
 
     def _do_search(self, fullname):
+        """Check if the module is available remotely, and return the file name.
+
+        Args:
+            fullname (str): The full name of the module.
+
+        Returns:
+            str | None: The path of the module on the remote server or None
+        """
         # We're dealing with dirs here
         fullname = '/'.join(fullname.split('.'))
         for extension in ["", '.py']:
@@ -158,6 +233,14 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
 
 
     def _do_request(self, fullname):
+        """Make a request to the remote server.
+
+        Args:
+            fullname (str): The full name of the requested module.
+
+        Returns:
+            http.client.HTTPResponse: The response of the webserver
+        """
         c = http.client.HTTPConnection(self.location, self.port)
         c.request("GET", fullname)
         return c.getresponse()
