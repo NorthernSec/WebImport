@@ -20,7 +20,7 @@ import os
 import click
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-import webimport.webimport
+from webimport import webimport
 
 class CustomHandler(SimpleHTTPRequestHandler):
     """Custom handler for the built-in http.server.

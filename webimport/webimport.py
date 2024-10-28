@@ -244,8 +244,3 @@ class WebImporter(importlib.abc.SourceLoader, importlib.abc.MetaPathFinder):
         c = http.client.HTTPConnection(self.location, self.port)
         c.request("GET", fullname)
         return c.getresponse()
-
-
-if __name__ == '__main__':
-    register(8000)
-
